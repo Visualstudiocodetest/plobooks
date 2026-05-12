@@ -24,10 +24,11 @@ Bien que le KKS soit originellement utilisé dans l'industrie, nous appliquons s
 ## 2. Stack Technique et Directives Spécifiques
 
 ### 2.1 Backend : FastAPI (Python) [web:37]
+- **Base de données :** Utilisez exclusivement **mySQL** comme moteur de base de données (pas de SQLite/PostgreSQL).
 - **Clean Architecture :** Séparez strictement la logique métier (Domain), l'application (Services), les routeurs (Présentation) et la base de données (Infrastructure).
 - **Validation :** Utilisez toujours Pydantic pour valider les entrées et les sorties.
 - **Documentation :** Maintenez Swagger/OpenAPI à jour via les docstrings et les descriptions de routes.
-- **Scraping/API ISBN :** Isolez la logique d'appel externe à l'API ISBN dans un service dédié (gestion des erreurs et timeouts).
+- **Scraping/API ISBN :** Isolez la logique d'appel externe à l'API ISBN dans un service dédié (gestion des erreurs et timeouts) et utilisez **OpenLibrary** comme source unique pour la récupération des métadonnées ISBN.
 
 ### 2.2 Frontend : Next.js (React / TypeScript) [web:33][web:34]
 - **Structure App Router :** Utilisez le dossier `app/` pour le routage et gardez les composants métier dans `src/components`.

@@ -17,7 +17,12 @@
 
 ## 🏗 Architecture du Projet
 
+
 Le projet suit les principes **SOLID**, **Clean Architecture** et **KISS**, et est divisé en deux parties principales :
+
+**⚠️ Contraintes techniques supplémentaires :**
+- **Base de données :** L'application fonctionne exclusivement avec une base de données **mySQL** (et non SQLite ou PostgreSQL).
+- **API ISBN :** Toutes les métadonnées des livres sont récupérées via l'API **OpenLibrary** (https://openlibrary.org/dev/docs/api/books).
 
 1. **Backend (API REST) - `FastAPI` :** 
    - Gère la logique métier, la base de données, l'authentification et l'intégration avec l'API ISBN pour récupérer les métadonnées des livres.

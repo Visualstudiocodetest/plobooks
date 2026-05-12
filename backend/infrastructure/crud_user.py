@@ -1,0 +1,65 @@
+from sqlalchemy.orm import Session
+from infrastructure import models
+from typing import Optional
+import os
+import binascii
+import hashlib
+import hmac
+def _get_pwd_context():
+    try:
+        from passlib.context import CryptContext
+    except Exception:
+        return None
+    return CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def get_password_hash(password: str) -> str:
+    ctx = _get_pwd_context()
+    if ctx is not None:
+        try:
+            return ctx.hash(password)
+        except Exception:
+            # bcrypt backend can be broken/mismatched in some envs; fallback to pbkdf2_hmac
+            pass
+    # fallback to simple pbkdf2_hmac
+    import hashlib, os, binascii
+    salt = os.urandom(16)
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, 100000)
+    return "pbkdf2_sha256$" + binascii.hexlify(salt).decode() + "$" + binascii.hexlify(dk).decode()
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    ctx = _get_pwd_context()
+    if ctx is not None:
+        try:
+            return ctx.verify(plain_password, hashed_password)
+        except Exception:
+            # fallback to pbkdf2 verifier below
+            pass
+    # fallback verify for pbkdf2_sha256
+    try:
+        if not hashed_password.startswith("pbkdf2_sha256$"):
+            return False
+        _, salt_hex, dk_hex = hashed_password.split("$")
+        salt = binascii.unhexlify(salt_hex)
+        expected = binascii.unhexlify(dk_hex)
+        dk = hashlib.pbkdf2_hmac('sha256', plain_password.encode(), salt, 100000)
+        return hmac.compare_digest(dk, expected)
+    except Exception:
+        return False
+
+def get_user_by_email(db: Session, email: str) -> Optional[models.Utilisateur]:
+    return db.query(models.Utilisateur).filter(models.Utilisateur.email == email).first()
+
+def create_user(db: Session, user_data: dict) -> models.Utilisateur:
+    db_user = models.Utilisateur(
+        nom=user_data["nom"],
+        prenom=user_data["prenom"],
+        email=user_data["email"],
+        mot_de_passe_hash=get_password_hash(user_data["mot_de_passe"]),
+        role=user_data.get("role", "user")
+    )
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user

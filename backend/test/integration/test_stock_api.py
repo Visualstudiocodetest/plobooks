@@ -1,0 +1,70 @@
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+
+def test_stock_and_sources_crud(client: TestClient, register_and_login, uniq: str):
+    headers = register_and_login(f"stock_{uniq}@example.com")
+
+    # create prerequisites for stock: article
+    r = client.post(
+        "/catalog/type-objets",
+        json={"libelle": "Livre", "code": f"STBOOK_{uniq}", "description": "d"},
+        headers=headers,
+    )
+    type_id = r.json()["id_type_objet"]
+    r = client.post("/catalog/etat-usures", json={"libelle": f"Etat_{uniq}", "description": "d"}, headers=headers)
+    etat_id = r.json()["id_etat_usure"]
+    r = client.post(
+        "/articles/",
+        json={
+            "id_type_objet": type_id,
+            "id_etat_usure": etat_id,
+            "sku": f"SKU_ST_{uniq}",
+            "titre": "Stocked article",
+            "prix_chf": 10.0,
+            "actif": True,
+            "categorie_ids": [],
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    article_id = r.json()["id_article"]
+
+    # SourceStock
+    r = client.post(
+        "/stock/sources",
+        json={"libelle": f"Source_{uniq}", "type_source": "WAREHOUSE", "description": "d"},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    source = r.json()
+    assert client.get("/stock/sources").status_code == 200
+    assert client.get(f"/stock/sources/{source['id_source_stock']}").status_code == 200
+
+    r = client.put(f"/stock/sources/{source['id_source_stock']}", json={"description": "u"}, headers=headers)
+    assert r.status_code == 200
+
+    # Stock
+    r = client.post(
+        "/stock/",
+        json={
+            "id_article": article_id,
+            "id_source_stock": source["id_source_stock"],
+            "quantite_disponible": 5,
+            "quantite_reservee": 0,
+        },
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    st = r.json()
+    assert client.get("/stock/").status_code == 200
+    assert client.get(f"/stock/{st['id_stock']}").status_code == 200
+
+    r = client.put(f"/stock/{st['id_stock']}", json={"quantite_disponible": 7}, headers=headers)
+    assert r.status_code == 200
+    assert r.json()["quantite_disponible"] == 7
+
+    assert client.delete(f"/stock/{st['id_stock']}", headers=headers).status_code == 204
+    assert client.delete(f"/stock/sources/{source['id_source_stock']}", headers=headers).status_code == 204
+

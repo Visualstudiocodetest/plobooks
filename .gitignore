@@ -4,3 +4,10 @@ backend/venv/
 backend/__pycache__
 frontend/node_modules/
 venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.DS_Store
+.vscode/

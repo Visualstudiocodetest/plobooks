@@ -1,0 +1,116 @@
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+
+from  infrastructure import models
+from  infrastructure.crud_base import CrudBase
+from  presentation.deps import get_current_user, get_db
+from  presentation.schemas import (
+    SourceStockCreate,
+    SourceStockRead,
+    SourceStockUpdate,
+    StockCreate,
+    StockRead,
+    StockUpdate,
+)
+
+router = APIRouter(prefix="/stock", tags=["stock"])
+
+source_stock_crud = CrudBase[models.SourceStock](models.SourceStock, "id_source_stock")
+stock_crud = CrudBase[models.Stock](models.Stock, "id_stock")
+
+
+@router.get("/sources", response_model=list[SourceStockRead])
+def list_sources(db: Session = Depends(get_db)):
+    return source_stock_crud.list(db)
+
+
+@router.get("/sources/{id_source_stock}", response_model=SourceStockRead)
+def get_source(id_source_stock: int, db: Session = Depends(get_db)):
+    obj = source_stock_crud.get(db, id_source_stock)
+    if obj is None:
+        raise HTTPException(status_code=404, detail="SourceStock not found")
+    return obj
+
+
+@router.post("/sources", response_model=SourceStockRead, status_code=status.HTTP_201_CREATED)
+def create_source(
+    payload: SourceStockCreate,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    obj = models.SourceStock(**payload.model_dump())
+    return source_stock_crud.create(db, obj)
+
+
+@router.put("/sources/{id_source_stock}", response_model=SourceStockRead)
+def update_source(
+    id_source_stock: int,
+    payload: SourceStockUpdate,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    updated = source_stock_crud.update(db, id_source_stock, payload.model_dump(exclude_unset=True))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="SourceStock not found")
+    return updated
+
+
+@router.delete("/sources/{id_source_stock}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_source(
+    id_source_stock: int,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    if not source_stock_crud.delete(db, id_source_stock):
+        raise HTTPException(status_code=404, detail="SourceStock not found")
+    return None
+
+
+@router.get("/", response_model=list[StockRead])
+def list_stock(db: Session = Depends(get_db)):
+    return stock_crud.list(db)
+
+
+@router.get("/{id_stock}", response_model=StockRead)
+def get_stock(id_stock: int, db: Session = Depends(get_db)):
+    obj = stock_crud.get(db, id_stock)
+    if obj is None:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return obj
+
+
+@router.post("/", response_model=StockRead, status_code=status.HTTP_201_CREATED)
+def create_stock(
+    payload: StockCreate,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    obj = models.Stock(**payload.model_dump())
+    return stock_crud.create(db, obj)
+
+
+@router.put("/{id_stock}", response_model=StockRead)
+def update_stock(
+    id_stock: int,
+    payload: StockUpdate,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    updated = stock_crud.update(db, id_stock, payload.model_dump(exclude_unset=True))
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return updated
+
+
+@router.delete("/{id_stock}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_stock(
+    id_stock: int,
+    db: Session = Depends(get_db),
+    _current_user=Depends(get_current_user),
+):
+    if not stock_crud.delete(db, id_stock):
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return None
+
