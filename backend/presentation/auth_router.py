@@ -10,7 +10,7 @@ from services.jwt_service import encode_hs256
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 480
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
