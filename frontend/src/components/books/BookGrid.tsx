@@ -7,13 +7,7 @@ export function BookGrid({ books }: { books: BookRead[] }) {
   }
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-        gap: 14,
-      }}
-    >
+    <div className="book-grid">
       {books.map((b) => (
         <BookCard key={b.id_article} book={b} />
       ))}

@@ -77,7 +77,7 @@ class Livre(Base):
     date_publication = Column(Date)
     langue = Column(String(50))
     article = relationship("Article", back_populates="livre")
-    scans = relationship("ScanISBN", back_populates="livre")
+    scans = relationship("ScanISBN", back_populates="livre", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class TypeObjet(Base):
@@ -227,4 +227,4 @@ class ScanISBN(Base):
     valide = Column(Boolean, nullable=False, server_default="0")
 
     utilisateur = relationship("Utilisateur", back_populates="scans")
-    livre = relationship("Livre", back_populates="scans")
+    livre = relationship("Livre", back_populates="scans", passive_deletes=True)

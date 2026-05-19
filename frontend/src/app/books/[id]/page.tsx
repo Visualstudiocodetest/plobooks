@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { getBook } from '@/services/books'
 import { Money } from '@/components/ui/Money'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
@@ -7,26 +8,21 @@ export const dynamic = 'force-dynamic'
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const book = await getBook(Number(id))
+  const isExternal = Boolean(book.image_link && book.image_link.startsWith('http') && !book.image_link.includes('/static/images/'))
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 14 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16 }}>
-          <div
-            className="card"
-            style={{
-              padding: 10,
-              display: 'grid',
-              placeItems: 'center',
-              background: 'linear-gradient(135deg, var(--color-primary-soft), rgba(0,0,0,0))',
-            }}
-          >
+    <div className="content-center">
+      <div className="card cardPadding">
+      <div className="book-detail-grid">
+          <div className="card book-image-wrap large">
             {book.image_link ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={book.image_link}
                 alt={book.titre}
-                style={{ maxWidth: '100%', maxHeight: 240, objectFit: 'contain' }}
+                width={220}
+                height={240}
+                style={{ objectFit: 'contain' }}
+                unoptimized={isExternal}
               />
             ) : (
               <div className="muted" style={{ fontWeight: 700 }}>

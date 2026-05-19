@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +11,8 @@ from presentation.stock_router import router as stock_router
 from presentation.order_router import router as order_router
 from presentation.scan_router import router as scan_router
 from presentation.user_router import router as user_router
+from presentation.images_router import router as images_router
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
@@ -35,3 +38,10 @@ app.include_router(stock_router)
 app.include_router(order_router)
 app.include_router(scan_router)
 app.include_router(user_router)
+app.include_router(images_router)
+
+# Serve static files (images, uploaded files) using an absolute path so imports
+# don't depend on the current working directory when tests run.
+static_dir = Path(__file__).resolve().parent / "static"
+static_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")

@@ -3,13 +3,15 @@
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import type { BookRead } from '@/types/api'
-import { listBooks } from '@/services/books'
+import { listBooks, deleteBook } from '@/services/books'
+import { listStocks } from '@/services/stocks'
 import { ApiError } from '@/services/api'
 
 export default function AdminBooksPage() {
   const [books, setBooks] = useState<BookRead[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [stockMap, setStockMap] = useState<Record<number, number>>({})
 
   useEffect(() => {
     let mounted = true
@@ -18,6 +20,20 @@ export default function AdminBooksPage() {
       .then((b) => {
         if (!mounted) return
         setBooks(b)
+      })
+      .finally(() => {
+        // fetch stocks
+        listStocks()
+          .then((s: any[]) => {
+            if (!mounted) return
+            const map: Record<number, number> = {}
+            for (const st of s || []) {
+              const avail = (st.quantite_disponible || 0) - (st.quantite_reservee || 0)
+              map[st.id_article] = (map[st.id_article] || 0) + avail
+            }
+            setStockMap(map)
+          })
+          .catch(() => {})
       })
       .catch((e: unknown) => {
         if (!mounted) return
@@ -34,11 +50,14 @@ export default function AdminBooksPage() {
 
   return (
     <div style={{ display: 'grid', gap: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <h1 style={{ margin: 0 }}>Livres</h1>
-        <Link className="btn btnPrimary" href="/admin/books/new">
-          Nouveau livre
-        </Link>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <Link className="btn btnPrimary" href="/admin/books/new">
+            + Ajouter
+          </Link>
+          <h1 style={{ margin: 0 }}>Livres</h1>
+        </div>
+        <div />
       </div>
 
       {loading ? <div className="muted">Chargement…</div> : null}
@@ -60,12 +79,28 @@ export default function AdminBooksPage() {
             <div style={{ display: 'grid' }}>
               <div style={{ fontWeight: 800 }}>{b.titre}</div>
               <div className="muted" style={{ fontSize: 13 }}>
-                ISBN {b.isbn} · id {b.id_article}
+                ISBN {b.isbn} · id {b.id_article} · stock {stockMap[b.id_article] || 0}
               </div>
             </div>
-            <Link className="btn" href={`/admin/books/${b.id_article}`}>
-              Modifier
-            </Link>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Link className="btn" href={`/admin/books/${b.id_article}`}>
+                Modifier
+              </Link>
+              <button
+                className="btn"
+                onClick={async () => {
+                  if (!confirm('Supprimer ce livre ?')) return
+                  try {
+                    await deleteBook(b.id_article)
+                    setBooks((prev) => prev.filter((x) => x.id_article !== b.id_article))
+                  } catch (e) {
+                    alert('Erreur lors de la suppression')
+                  }
+                }}
+              >
+                Supprimer
+              </button>
+            </div>
           </div>
         ))}
         {!books.length && !loading ? <div className="muted">Aucun livre.</div> : null}

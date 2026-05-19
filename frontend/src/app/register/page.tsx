@@ -31,10 +31,10 @@ export default function RegisterPage() {
   }
 
   return (
-    <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
+    <div className="content-center">
       <h1 style={{ margin: 0 }}>Créer un compte</h1>
-      <form className="card" style={{ padding: 16, display: 'grid', gap: 12 }} onSubmit={onSubmit}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <form className="card cardPadding" onSubmit={onSubmit}>
+        <div className="two-up">
           <input className="input" value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Prénom" />
           <input className="input" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom" />
         </div>

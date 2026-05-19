@@ -1,10 +1,13 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from sqlalchemy.orm import Session
 from typing import List
 from services.book_service import BookService
+from services.image_service import download_image
 from domain.book import Book
 from presentation.schemas import BookCreate, BookRead, BookUpdate
 from presentation.deps import get_db, require_admin
+from infrastructure import models
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/books", tags=["books"])
 
@@ -38,12 +41,63 @@ def get_book(id_article: int, db: Session = Depends(get_db)):
     return book
 
 @router.post("/", response_model=BookRead, status_code=status.HTTP_201_CREATED)
-def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin), request: Request = None):
     service = BookService(db)
+    image_link = book_in.image_link
+    # If an external URL is provided, try to download it and serve from our static folder
+    try:
+        if image_link and image_link.lower().startswith(('http://', 'https://')) and '/static/images/' not in image_link:
+            try:
+                rel = download_image(image_link)
+                base = str(request.base_url).rstrip('/') if request is not None else ''
+                image_link = f"{base}{rel}" if base else rel
+            except Exception:
+                # if download fails, keep original link
+                pass
+    except Exception:
+        # ignore image handling errors
+        image_link = book_in.image_link
+
+    # Server-side validation: required fields and ensure foreign keys exist (create sensible defaults if missing)
+    if not (book_in.titre and book_in.titre.strip()):
+        raise HTTPException(status_code=400, detail='Titre obligatoire')
+    if not (book_in.isbn and book_in.isbn.strip()):
+        raise HTTPException(status_code=400, detail='ISBN obligatoire')
+    if not (book_in.auteur and book_in.auteur.strip()):
+        raise HTTPException(status_code=400, detail='Auteur obligatoire')
+    if book_in.prix_chf is None or book_in.prix_chf < 0:
+        raise HTTPException(status_code=400, detail='Prix invalide')
+    # ensure referenced lists exist; create sensible defaults if missing
+    # TypeObjet: prefer provided id, else look for code 'BOOK' or libelle 'Livre', else create default
+    type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.id_type_objet == getattr(book_in, 'id_type_objet', None)).first()
+    if not type_obj:
+        type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.code == 'BOOK').first()
+    if not type_obj:
+        type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.libelle == 'Livre').first()
+    if not type_obj:
+        type_obj = models.TypeObjet(libelle='Livre', code='BOOK', description='Type par défaut')
+        db.add(type_obj)
+        db.commit()
+        db.refresh(type_obj)
+    type_id = type_obj.id_type_objet
+
+    # EtatUsure: prefer provided id, else look for libelle 'Bon', else any existing, else create default
+    etat = db.query(models.EtatUsure).filter(models.EtatUsure.id_etat_usure == getattr(book_in, 'id_etat_usure', None)).first()
+    if not etat:
+        etat = db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon').first()
+    if not etat:
+        etat = db.query(models.EtatUsure).first()
+    if not etat:
+        etat = models.EtatUsure(libelle='Bon', description='Etat par défaut')
+        db.add(etat)
+        db.commit()
+        db.refresh(etat)
+    etat_id = etat.id_etat_usure
+
     book = Book(
         id_article=0,  # Will be set by DB
-        id_type_objet=book_in.id_type_objet,
-        id_etat_usure=book_in.id_etat_usure,
+        id_type_objet=type_id,
+        id_etat_usure=etat_id,
         titre=book_in.titre,
         isbn=book_in.isbn,
         auteur=book_in.auteur,
@@ -51,7 +105,7 @@ def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depen
         date_publication=book_in.date_publication,
         langue=book_in.langue,
         description=book_in.description,
-        image_link=book_in.image_link,
+        image_link=image_link,
         prix_chf=book_in.prix_chf,
         actif=book_in.actif,
     )
@@ -60,12 +114,58 @@ def create_book(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depen
 
 
 @router.post("", response_model=BookRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def create_book_no_slash(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin)):
+def create_book_no_slash(book_in: BookCreate, db: Session = Depends(get_db), _admin=Depends(require_admin), request: Request = None):
     service = BookService(db)
+    image_link = book_in.image_link
+    try:
+        if image_link and image_link.lower().startswith(('http://', 'https://')) and '/static/images/' not in image_link:
+            try:
+                rel = download_image(image_link)
+                base = str(request.base_url).rstrip('/') if request is not None else ''
+                image_link = f"{base}{rel}" if base else rel
+            except Exception:
+                pass
+    except Exception:
+        image_link = book_in.image_link
+    # Server-side validation: required fields and ensure foreign keys exist (create sensible defaults if missing)
+    if not (book_in.titre and book_in.titre.strip()):
+        raise HTTPException(status_code=400, detail='Titre obligatoire')
+    if not (book_in.isbn and book_in.isbn.strip()):
+        raise HTTPException(status_code=400, detail='ISBN obligatoire')
+    if not (book_in.auteur and book_in.auteur.strip()):
+        raise HTTPException(status_code=400, detail='Auteur obligatoire')
+    if book_in.prix_chf is None or book_in.prix_chf < 0:
+        raise HTTPException(status_code=400, detail='Prix invalide')
+
+    # ensure referenced lists exist; create sensible defaults if missing (same logic as create_book)
+    type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.id_type_objet == getattr(book_in, 'id_type_objet', None)).first()
+    if not type_obj:
+        type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.code == 'BOOK').first()
+    if not type_obj:
+        type_obj = db.query(models.TypeObjet).filter(models.TypeObjet.libelle == 'Livre').first()
+    if not type_obj:
+        type_obj = models.TypeObjet(libelle='Livre', code='BOOK', description='Type par défaut')
+        db.add(type_obj)
+        db.commit()
+        db.refresh(type_obj)
+    type_id = type_obj.id_type_objet
+
+    etat = db.query(models.EtatUsure).filter(models.EtatUsure.id_etat_usure == getattr(book_in, 'id_etat_usure', None)).first()
+    if not etat:
+        etat = db.query(models.EtatUsure).filter(models.EtatUsure.libelle == 'Bon').first()
+    if not etat:
+        etat = db.query(models.EtatUsure).first()
+    if not etat:
+        etat = models.EtatUsure(libelle='Bon', description='Etat par défaut')
+        db.add(etat)
+        db.commit()
+        db.refresh(etat)
+    etat_id = etat.id_etat_usure
+
     book = Book(
         id_article=0,  # Will be set by DB
-        id_type_objet=book_in.id_type_objet,
-        id_etat_usure=book_in.id_etat_usure,
+        id_type_objet=type_id,
+        id_etat_usure=etat_id,
         titre=book_in.titre,
         isbn=book_in.isbn,
         auteur=book_in.auteur,
@@ -73,7 +173,7 @@ def create_book_no_slash(book_in: BookCreate, db: Session = Depends(get_db), _ad
         date_publication=book_in.date_publication,
         langue=book_in.langue,
         description=book_in.description,
-        image_link=book_in.image_link,
+        image_link=image_link,
         prix_chf=book_in.prix_chf,
         actif=book_in.actif,
     )

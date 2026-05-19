@@ -59,11 +59,11 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    <div className="content-center">
       <h1 style={{ margin: 0 }}>Commande</h1>
 
       {!isLoggedIn ? (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+        <div className="card cardPadding">
           <div style={{ fontWeight: 800 }}>Connexion requise</div>
           <div className="muted">Vous devez être connecté pour créer une commande.</div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -76,14 +76,14 @@ export default function CheckoutPage() {
           </div>
         </div>
       ) : items.length === 0 ? (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+        <div className="card cardPadding">
           <div className="muted">Votre panier est vide.</div>
           <Link className="btn btnPrimary" href="/catalog">
             Voir le catalogue
           </Link>
         </div>
       ) : (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
+        <div className="card cardPadding">
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
             <div>
               <div style={{ fontWeight: 900 }}>Total</div>

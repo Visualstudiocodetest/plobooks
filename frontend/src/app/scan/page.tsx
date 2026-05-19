@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { ApiError } from '@/services/api'
 import { getBookByIsbn } from '@/services/books'
 import { createScan } from '@/services/scans'
 import { useAuth } from '@/components/auth/AuthProvider'
 import type { BookRead } from '@/types/api'
 import { lookupIsbn } from '@/services/openlibrary'
+import { fetchRemoteImage } from '@/services/images'
 
 type OpenLibraryPreview = {
   titre: string
@@ -179,8 +181,17 @@ export default function ScanPage() {
 
           const titre = [data.title, data.subtitle].filter(Boolean).join(' — ') || c
           const auteur = data.authors?.map((a) => a.name).filter(Boolean).join(', ') || ''
-          const image_link = data.cover?.large || data.cover?.medium || data.cover?.small || null
+          let image_link = data.cover?.large || data.cover?.medium || data.cover?.small || null
           const description = typeof data.notes === 'string' ? data.notes : ''
+
+          if (image_link) {
+            try {
+              // ask backend to download and serve the image locally
+              image_link = await fetchRemoteImage(image_link)
+            } catch {
+              // ignore failures and fall back to remote URL
+            }
+          }
 
           setOpenPreview({ titre, auteur, image_link, description })
           setSuccess('Livre non présent dans la base. Données OpenLibrary chargées pour pré-remplir.')
@@ -245,7 +256,7 @@ export default function ScanPage() {
   }, [isbn])
 
   return (
-    <div style={{ maxWidth: 920, margin: '0 auto', display: 'grid', gap: 14 }}>
+    <div className="content-center">
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
         <h1 style={{ margin: 0 }}>Scanner un ISBN</h1>
         {isLoggedIn ? (
@@ -257,8 +268,8 @@ export default function ScanPage() {
         )}
       </div>
 
-      <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10 }}>
+      <div className="card cardPadding">
+      <div className="form-row three">
           <input
             className="input"
             value={isbn}
@@ -279,18 +290,7 @@ export default function ScanPage() {
             ? "Sur mobile, pointez la caméra vers le code-barres (EAN-13)."
             : "Votre navigateur ne supporte pas BarcodeDetector. Utilisez la saisie manuelle."}
         </div>
-
-        <div
-          className="card"
-          style={{
-            overflow: 'hidden',
-            borderRadius: 14,
-            borderColor: 'var(--color-border)',
-            aspectRatio: '16 / 9',
-            background: 'var(--color-secondary)',
-            position: 'relative',
-          }}
-        >
+        <div className="video-preview card">
           <video
             ref={videoRef}
             playsInline
@@ -302,35 +302,21 @@ export default function ScanPage() {
               opacity: running ? 1 : 0,
             }}
           />
-          {!running ? (
-            <div
-              style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'grid',
-                placeItems: 'center',
-                padding: 16,
-                textAlign: 'center',
-                color: 'var(--color-surface)',
-                opacity: 0.92,
-                fontWeight: 700,
-              }}
-            >
-              Aperçu caméra
-            </div>
-          ) : null}
+          {!running ? <div className="video-overlay">Aperçu caméra</div> : null}
         </div>
       </div>
 
       {book ? (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
+        <div className="card cardPadding">
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             {book.image_link ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={book.image_link}
                 alt={book.titre}
-                style={{ width: 64, height: 88, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                width={64}
+                height={88}
+                style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                unoptimized={Boolean(book.image_link && book.image_link.startsWith('http') && !book.image_link.includes('/static/images/'))}
               />
             ) : (
               <div className="card" style={{ width: 64, height: 88 }} />
@@ -366,20 +352,16 @@ export default function ScanPage() {
       ) : null}
 
       {!book && openPreview ? (
-        <div className="card" style={{ padding: 16, display: 'grid', gap: 12 }}>
+        <div className="card cardPadding">
           <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
             {openPreview.image_link ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={openPreview.image_link}
                 alt={openPreview.titre}
-                style={{
-                  width: 64,
-                  height: 88,
-                  objectFit: 'cover',
-                  borderRadius: 10,
-                  border: '1px solid var(--color-border)',
-                }}
+                width={64}
+                height={88}
+                style={{ objectFit: 'cover', borderRadius: 10, border: '1px solid var(--color-border)' }}
+                unoptimized={Boolean(openPreview.image_link && openPreview.image_link.startsWith('http') && !openPreview.image_link.includes('/static/images/'))}
               />
             ) : (
               <div className="card" style={{ width: 64, height: 88 }} />

@@ -32,9 +32,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 520, margin: '0 auto', display: 'grid', gap: 14 }}>
+    <div className="content-center">
       <h1 style={{ margin: 0 }}>Connexion</h1>
-      <form className="card" style={{ padding: 16, display: 'grid', gap: 12 }} onSubmit={onSubmit}>
+      <form className="card cardPadding" onSubmit={onSubmit}>
         <input className="input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
         <input
           className="input"

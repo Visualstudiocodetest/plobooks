@@ -1,50 +1,35 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
 import { useAuth } from '@/components/auth/AuthProvider'
 import { useCart } from '@/components/cart/CartProvider'
 
 export function Header() {
   const { isLoggedIn, isAdmin, setToken } = useAuth()
   const { count } = useCart()
+  const [open, setOpen] = useState(false)
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-        background: 'rgba(var(--color-surface-rgb), 0.92)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: '1px solid var(--color-border)',
-      }}
-    >
-      <div
-        className="container"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '12px 16px',
-        }}
-      >
+    <header className="site-header">
+      <div className="container header-inner">
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <Link href="/" style={{ fontWeight: 900, letterSpacing: 0.3, color: 'var(--color-text)' }}>
+          <Link href="/" className="brand">
             PLOBOOKS
           </Link>
-          <nav style={{ display: 'flex', gap: 12, fontWeight: 600 }}>
+          <nav className="main-nav">
             <Link className="muted" href="/catalog">
               Catalogue
             </Link>
-            {isLoggedIn ? (
-              <Link className="muted" href="/scan">
-                Scanner
-              </Link>
-            ) : null}
             {isAdmin ? (
-              <Link className="muted" href="/admin">
-                Back-office
-              </Link>
+              <>
+                <Link className="muted" href="/admin/books">
+                  Interface admin
+                </Link>
+                <Link className="muted" href="/admin/lists">
+                  Gérer les listes
+                </Link>
+              </>
             ) : null}
           </nav>
         </div>
@@ -62,6 +47,25 @@ export function Header() {
               Connexion
             </Link>
           )}
+
+          <button
+            className="nav-toggle"
+            aria-label="Toggle menu"
+            aria-expanded={open}
+            onClick={() => setOpen((s) => !s)}
+            type="button"
+          >
+            <span className="hamburger" />
+          </button>
+        </div>
+      </div>
+
+      <div className={`mobile-nav ${open ? 'open' : ''}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Link href="/catalog">Catalogue</Link>
+          {isAdmin ? <Link href="/admin/books">Interface admin</Link> : null}
+          {isAdmin ? <Link href="/admin/lists">Gérer les listes</Link> : null}
+          <Link href="/cart">Panier ({count})</Link>
         </div>
       </div>
     </header>
