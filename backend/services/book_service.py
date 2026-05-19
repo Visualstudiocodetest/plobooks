@@ -17,6 +17,12 @@ class BookService:
             return self._to_domain_book(db_livre)
         return None
 
+    def get_book_by_isbn(self, isbn: str) -> Optional[Book]:
+        db_livre = crud_book.get_book_by_isbn(self.db_session, isbn)
+        if db_livre:
+            return self._to_domain_book(db_livre)
+        return None
+
     def create_book(self, book: Book) -> Book:
         db_livre = crud_book.create_book(self.db_session, book)
         return self._to_domain_book(db_livre)

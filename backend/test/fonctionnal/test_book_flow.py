@@ -14,12 +14,14 @@ client = TestClient(app)
 
 def test_book_crud_flow():
     # Register + login (writes require auth)
+    import uuid
+    uniq_user = uuid.uuid4().hex[:10]
     user = {
         "nom": "Flow",
         "prenom": "User",
-        "email": "flow@example.com",
+        "email": f"flow_{uniq_user}@example.com",
         "mot_de_passe": "password123",
-        "role": "user",
+        "role": "admin",
     }
     r = client.post("/auth/register", json=user)
     assert r.status_code in (201, 400), r.text
@@ -29,7 +31,6 @@ def test_book_crud_flow():
     headers = {"Authorization": f"Bearer {token}"}
 
     # Create
-    import uuid
     uniq = uuid.uuid4().hex[:10]
     payload = { # type: ignore
         "titre": "Flow Book",

@@ -59,6 +59,11 @@ def get_book(db: Session, id_article: int) -> Optional[models.Livre]:
     """Return a book by article ID."""
     return db.query(models.Livre).filter(models.Livre.id_article == id_article).first()
 
+
+def get_book_by_isbn(db: Session, isbn: str) -> Optional[models.Livre]:
+    """Return a book by ISBN (exact match)."""
+    return db.query(models.Livre).filter(models.Livre.isbn == isbn).first()
+
 def create_book(db: Session, book: Book) -> models.Livre:
     """Insert a new book and its article."""
     id_type_objet, id_etat_usure = _ensure_default_refs(db, book)

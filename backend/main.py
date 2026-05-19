@@ -1,5 +1,7 @@
+import os
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from presentation.book_router import router as book_router
 from presentation.auth_router import router as auth_router
 from presentation.catalog_router import router as catalog_router
@@ -10,6 +12,16 @@ from presentation.scan_router import router as scan_router
 from presentation.user_router import router as user_router
 
 app = FastAPI()
+
+origins_env = os.getenv("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+allow_origins = [o.strip() for o in origins_env.split(",") if o.strip()]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allow_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def root():

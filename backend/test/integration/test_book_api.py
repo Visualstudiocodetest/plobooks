@@ -23,7 +23,7 @@ def test_create_and_get_book():
         "prenom": "User",
         "email": f"integration_{uniq}@example.com",
         "mot_de_passe": "password123",
-        "role": "user"
+        "role": "admin"
     }
     r = client.post("/auth/register", json=user)
     assert r.status_code in (201, 400), r.text
@@ -57,7 +57,7 @@ def test_create_and_get_book():
         "prix_chf": 20.0,
         "actif": True
     }
-    response = client.post("/books/", json=payload, headers={"Authorization": f"Bearer {token}"})
+    response = client.post("/books", json=payload, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 201, response.text
     data = response.json()
     assert data["titre"] == payload["titre"]
